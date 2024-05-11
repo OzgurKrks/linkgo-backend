@@ -84,7 +84,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   await user.save();
 
-  const resePasswordUrl = `http://localhost:3000/resetpassword/${resetPasswordToken}`;
+  const resePasswordUrl = `https://linkgo-front.vercel.app/${resetPasswordToken}`;
 
   const emailTemplate = `
   <h3>Reset Your Password</h3>
