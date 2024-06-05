@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import cloudinary from "../utils/cloudinaryConfig.js";
 import asyncHandler from "express-async-handler";
 import User from "../models/userModel.js";
 import { sendEmail } from "../helpers/sendEmail.js";
@@ -7,24 +8,29 @@ import { sendEmail } from "../helpers/sendEmail.js";
 // @route   POST /api/users
 // @access  Public
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
+  const { username, email, password } = req.body;
 
-  if (!name || !email || !password) {
+  if (!username || !email || !password) {
     res.status(400);
     throw new Error("Please add all fields");
   }
 
   // Check if user exists
-  const userExists = await User.findOne({ email });
+  const emailExists = await User.findOne({ email });
+  const usernameExists = await User.findOne({ username });
 
-  if (userExists) {
+  if (emailExists) {
     res.status(400);
-    throw new Error("User already exists");
+    throw new Error("Email already exists");
+  }
+  if (usernameExists) {
+    res.status(400);
+    throw new Error("Username already exists");
   }
 
   // Create user
   const user = await User.create({
-    name,
+    username,
     email,
     password,
   });
@@ -32,7 +38,7 @@ const registerUser = asyncHandler(async (req, res) => {
   if (user) {
     res.status(201).json({
       _id: user.id,
-      name: user.name,
+      username: user.username,
       email: user.email,
       token: user.generateJwtFromUser(),
     });
@@ -46,10 +52,11 @@ const registerUser = asyncHandler(async (req, res) => {
 // @route   POST /api/users/login
 // @access  Public
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { username, email, password } = req.body;
 
   // Check for user email
-  const user = await User.findOne({ email }).select("+password");
+  const query = email ? { email: email } : { username: username };
+  const user = await User.findOne(query).select("+password");
 
   const comparePassword = (password, hashedPassword) => {
     return bcrypt.compareSync(password, hashedPassword);
@@ -58,13 +65,47 @@ const loginUser = asyncHandler(async (req, res) => {
   if (user && comparePassword(password, user.password)) {
     res.json({
       _id: user.id,
-      name: user.name,
+      username: user.username,
       email: user.email,
       token: user.generateJwtFromUser(),
     });
   } else {
     res.status(400);
     throw new Error("Invalid credentials");
+  }
+});
+const editProfile = asyncHandler(async (req, res) => {
+  try {
+    const { name, image, profile_title, profile_bio } = req.body;
+
+    // Assuming you're using Cloudinary
+
+    const result = await cloudinary.uploader.upload(image, {
+      use_filename: true,
+      folder: "social",
+    });
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { name, profile_image: result.secure_url, profile_title, profile_bio },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Server Error." });
   }
 });
 
@@ -84,7 +125,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   await user.save();
 
-  const resePasswordUrl = `https://linkgo-front.vercel.app/${resetPasswordToken}`;
+  const resePasswordUrl = `http://localhost:3000/resetpassword/${resetPasswordToken}`;
 
   const emailTemplate = `
   <h3>Reset Your Password</h3>
@@ -149,6 +190,39 @@ const resetPassword = asyncHandler(async (req, res) => {
   });
 });
 
+const updateUserPage = asyncHandler(async (req, res) => {
+  try {
+    const { image_style, backgroundColor, buttonStyle } = req.body;
+
+    // Validate that req.user._id exists
+    if (!req.user || !req.user._id) {
+      return res.status(400).json({ message: "User ID not found in request" });
+    }
+
+    // Find the user by ID and update the fields
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { image_style, backgroundColor, buttonStyle },
+      {
+        new: true, // Return the modified document rather than the original
+        runValidators: true, // Run validators on the update operation
+      }
+    );
+
+    // If user not found, return a 404 error
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Respond with the updated user object
+    res.status(200).json(user);
+  } catch (error) {
+    // Handle errors and respond with a 500 status code
+    console.error("Error updating user:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // @desc    Get user data
 // @route   GET /api/users/me
 // @access  Private
@@ -156,4 +230,12 @@ const getMe = asyncHandler(async (req, res) => {
   res.status(200).json(req.user);
 });
 
-export { registerUser, loginUser, forgotPassword, resetPassword, getMe };
+export {
+  registerUser,
+  loginUser,
+  forgotPassword,
+  resetPassword,
+  getMe,
+  editProfile,
+  updateUserPage,
+};

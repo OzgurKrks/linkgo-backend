@@ -6,7 +6,11 @@ import bcrypt from "bcryptjs";
 const userSchema = mongoose.Schema({
   name: {
     type: String,
+  },
+  username: {
+    type: String,
     required: [true, "Please provide a name"],
+    unique: true,
   },
   email: {
     type: String,
@@ -36,8 +40,27 @@ const userSchema = mongoose.Schema({
   Package: {
     type: String,
   },
-  Url_Name: {
+  url_Name: {
     type: String,
+  },
+  profile_image: {
+    type: String,
+  },
+  profile_title: {
+    type: String,
+  },
+  profile_bio: {
+    type: String,
+  },
+  image_style: {
+    type: String,
+  },
+  backgroundColor: {
+    type: String,
+  },
+  buttonStyle: {
+    type: Number,
+    default: 0,
   },
   resetPasswordToken: {
     type: String,
@@ -66,7 +89,7 @@ userSchema.pre("save", function (next) {
 userSchema.methods.generateJwtFromUser = function () {
   const payload = {
     id: this._id,
-    name: this.name,
+    username: this.username,
   };
   const token = jwt.sign(payload, "secret", {
     expiresIn: "30d",
