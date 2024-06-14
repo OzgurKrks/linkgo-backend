@@ -59,8 +59,26 @@ const userSchema = mongoose.Schema({
     type: String,
   },
   buttonStyle: {
-    type: Number,
-    default: 0,
+    radius: {
+      type: String,
+      default: "30",
+    },
+    color: {
+      type: String,
+      default: "black",
+    },
+    backgroundColor: {
+      type: String,
+      default: "white",
+    },
+    shadow: {
+      type: String,
+      default: "",
+    },
+    border: {
+      type: String,
+      default: "none",
+    },
   },
   resetPasswordToken: {
     type: String,

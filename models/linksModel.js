@@ -8,7 +8,7 @@ const linkSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-  image: {
+  thumbnail_image: {
     type: String,
   },
   order: {

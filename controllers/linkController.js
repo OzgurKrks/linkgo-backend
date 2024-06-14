@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import linksModel from "../models/linksModel.js";
+import cloudinary from "../utils/cloudinaryConfig.js";
 import * as cheerio from "cheerio";
 import axios from "axios";
 
@@ -77,6 +78,39 @@ const updateLinks = asyncHandler(async (req, res) => {
   }
 });
 
+const addThumbnail = asyncHandler(async (req, res) => {
+  const { link_id } = req.params;
+  console.log(link_id);
+  const { thumbnail_image } = req.body;
+  try {
+    const result = await cloudinary.uploader.upload(thumbnail_image, {
+      use_filename: true,
+      folder: "social",
+    });
+
+    const link = await linksModel.findOne({ _id: link_id });
+
+    if (!link) {
+      return res.status(404).json({ message: "Link not found" });
+    }
+
+    if (link.user.toString() !== req.user.id) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this link" });
+    }
+
+    // Link'i güncelle
+    link.thumbnail_image = result.secure_url ?? link.thumbnail_image;
+
+    const updatedLink = await link.save();
+
+    res.status(200).json(updatedLink);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 const deleteLink = asyncHandler(async (req, res) => {
   const { link_id } = req.params;
 
@@ -120,4 +154,11 @@ const updateOrder = asyncHandler(async (req, res) => {
   res.status(200).json(linksModel);
 });
 
-export { setLink, getLinks, updateOrder, updateLinks, deleteLink };
+export {
+  setLink,
+  getLinks,
+  updateOrder,
+  updateLinks,
+  addThumbnail,
+  deleteLink,
+};

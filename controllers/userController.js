@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import cloudinary from "../utils/cloudinaryConfig.js";
 import asyncHandler from "express-async-handler";
 import User from "../models/userModel.js";
+import Links from "../models/linksModel.js";
 import { sendEmail } from "../helpers/sendEmail.js";
 
 // @desc    Register new user
@@ -74,11 +75,41 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new Error("Invalid credentials");
   }
 });
+
+const editAccount = asyncHandler(async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    // Validate that req.user._id exists
+    if (!req.user || !req.user._id) {
+      return res.status(400).json({ message: "User ID not found in request" });
+    }
+
+    const user = await User.findById(req.user._id);
+    // If user not found, return a 404 error
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (name !== undefined) {
+      user.name = name;
+    }
+    if (email !== undefined) {
+      user.email = email;
+    }
+    await user.save();
+
+    // Respond with the updated user object
+    res.status(200).json(user);
+  } catch (error) {
+    // Handle errors and respond with a 500 status code
+    console.error("Error updating user:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 const editProfile = asyncHandler(async (req, res) => {
   try {
     const { name, image, profile_title, profile_bio } = req.body;
-
-    // Assuming you're using Cloudinary
 
     const result = await cloudinary.uploader.upload(image, {
       use_filename: true,
@@ -199,20 +230,45 @@ const updateUserPage = asyncHandler(async (req, res) => {
       return res.status(400).json({ message: "User ID not found in request" });
     }
 
-    // Find the user by ID and update the fields
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      { image_style, backgroundColor, buttonStyle },
-      {
-        new: true, // Return the modified document rather than the original
-        runValidators: true, // Run validators on the update operation
-      }
-    );
-
+    const user = await User.findById(req.user._id);
     // If user not found, return a 404 error
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    // Update fields if provided in the request body
+    if (image_style !== undefined) {
+      user.image_style = image_style;
+    }
+    if (backgroundColor !== undefined) {
+      user.backgroundColor = backgroundColor;
+    }
+    if (buttonStyle !== undefined) {
+      user.buttonStyle = {
+        radius:
+          buttonStyle.radius !== undefined
+            ? buttonStyle.radius
+            : user.buttonStyle.radius,
+        color:
+          buttonStyle.color !== undefined
+            ? buttonStyle.color
+            : user.buttonStyle.color,
+        backgroundColor:
+          buttonStyle.backgroundColor !== undefined
+            ? buttonStyle.backgroundColor
+            : user.buttonStyle.backgroundColor,
+        shadow:
+          buttonStyle.shadow !== undefined
+            ? buttonStyle.shadow
+            : user.buttonStyle.shadow,
+        border:
+          buttonStyle.border !== undefined
+            ? buttonStyle.border
+            : user.buttonStyle.border,
+      };
+    }
+
+    await user.save();
 
     // Respond with the updated user object
     res.status(200).json(user);
@@ -230,12 +286,38 @@ const getMe = asyncHandler(async (req, res) => {
   res.status(200).json(req.user);
 });
 
+const getSinglePage = asyncHandler(async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    if (!username) {
+      return res.status(404).json({ error: "Username not provided" });
+    }
+
+    const user = await User.findOne({ username });
+    const links = await Links.find({ user: user._id }).sort({ order: 1 });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    if (!links) {
+      return res.status(404).json({ error: "Links not found" });
+    }
+
+    res.status(200).json({ data: { user: user, links: links } });
+  } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
 export {
   registerUser,
   loginUser,
   forgotPassword,
   resetPassword,
   getMe,
+  editAccount,
   editProfile,
   updateUserPage,
+  getSinglePage,
 };

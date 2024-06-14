@@ -9,6 +9,8 @@ import {
   getMe,
   editProfile,
   updateUserPage,
+  editAccount,
+  getSinglePage,
 } from "../controllers/userController.js";
 
 router.post("/login", loginUser);
@@ -18,6 +20,8 @@ router.put("/resetpassword", resetPassword);
 router.put("/editUser", protect, editProfile);
 router.get("/getMe", protect, getMe);
 router.put("/updateUserPage", protect, updateUserPage);
+router.put("/editAccount", protect, editAccount);
+router.get("/getSinglePage/:username", getSinglePage);
 
 export { router };
 // http://localhost:5000/api/users/getMe
