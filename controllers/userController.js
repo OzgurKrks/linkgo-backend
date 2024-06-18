@@ -286,6 +286,7 @@ const getMe = asyncHandler(async (req, res) => {
   res.status(200).json(req.user);
 });
 
+// get single page
 const getSinglePage = asyncHandler(async (req, res) => {
   try {
     const { username } = req.params;
@@ -310,6 +311,20 @@ const getSinglePage = asyncHandler(async (req, res) => {
   }
 });
 
+const deleteProfileImage = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  // If user not found, return a 404 error
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  user.profile_image = "";
+
+  user.save();
+
+  res.status(200).json({ message: "operation successful" });
+});
+
 export {
   registerUser,
   loginUser,
@@ -320,4 +335,5 @@ export {
   editProfile,
   updateUserPage,
   getSinglePage,
+  deleteProfileImage,
 };
