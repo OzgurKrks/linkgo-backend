@@ -311,6 +311,7 @@ const getSinglePage = asyncHandler(async (req, res) => {
   }
 });
 
+// delte profile image
 const deleteProfileImage = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
   // If user not found, return a 404 error
@@ -319,6 +320,26 @@ const deleteProfileImage = asyncHandler(async (req, res) => {
   }
 
   user.profile_image = "";
+
+  user.save();
+
+  res.status(200).json({ message: "operation successful" });
+});
+
+// update bio and title
+const updateBioAndTitle = asyncHandler(async (req, res) => {
+  const { profile_bio, profile_title } = req.body;
+  const user = await User.findById(req.user._id);
+  // If user not found, return a 404 error
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  if (profile_bio !== undefined) {
+    user.profile_bio = profile_bio;
+  }
+  if (profile_title !== undefined) {
+    user.profile_title = profile_title;
+  }
 
   user.save();
 
@@ -336,4 +357,5 @@ export {
   updateUserPage,
   getSinglePage,
   deleteProfileImage,
+  updateBioAndTitle,
 };
